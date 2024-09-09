@@ -17,12 +17,16 @@ main(int argc, char *argv[])
     read(p1[0], &ball, 1);
     fprintf(1, "%d: received ping\n", getpid());
     write(p2[1], &ball, 1);
+    close(p1[0]);
+    close(p2[1]);
   } else {
     close(p1[0]);
     close(p2[1]);
     write(p1[1], &ball, 1);
     read(p2[0], &ball, 1);
     fprintf(1, "%d: received pong\n", getpid());
+    close(p1[1]);
+    close(p2[0]);
   }
   exit(0);
 }
