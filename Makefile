@@ -194,6 +194,7 @@ UPROGS=\
 	$U/_usertests\
 	$U/_grind\
 	$U/_pingpong\
+	$U/_primes\
 	$U/_wc\
 	$U/_zombie\
 
