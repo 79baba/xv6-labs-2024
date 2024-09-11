@@ -8,7 +8,7 @@
 #include "sleeplock.h"
 #include "file.h"
 
-#define PIPESIZE 512
+#define PIPESIZE 1024
 
 struct pipe {
   struct spinlock lock;

@@ -2,15 +2,15 @@
 #include "kernel/fcntl.h"
 #include "user/user.h"
 
-#define MAX_NUM 100
+#define MAX_NUM 267
 
 void primeproc(int) __attribute__((noreturn));
 
 void
 primeproc(int readDp)
 {
-  int prime;
-  if(read(readDp, &prime, 4) == 0){
+  short prime;
+  if(read(readDp, &prime, 2) == 0){
     close(readDp);
     exit(0);
   }
@@ -22,13 +22,14 @@ primeproc(int readDp)
     exit(1);
   }
 
-  int n[MAX_NUM];
-  for(int i = 0; i< MAX_NUM; i++)
-    n[i] = 1;
-  int s = 0;
-  while(read(readDp, &n[s], 4) > 0)
-    s++;
+  short n;
+  while(read(readDp, &n, 2) > 0){
+    if(n % prime != 0)
+      write(right[1], &n, 2);
+  }
+    
   close(readDp);
+  close(right[1]);
 
   int pid = fork();
 
@@ -42,11 +43,6 @@ primeproc(int readDp)
     primeproc(right[0]);
   } else {
     close(right[0]);
-    for(int i = 0; n[i] != 1; i++){
-      if(n[i] % prime != 0)
-        write(right[1], &n[i], 4);
-    }
-    close(right[1]);
     wait(0);
   }
   exit(0);
@@ -73,10 +69,10 @@ main(int argc, char *argv[])
     primeproc(p[0]);
   } else {
     close(p[0]);
-    int n[MAX_NUM];
+    short n[MAX_NUM];
     for(int i = 0; i < MAX_NUM; i++){
       n[i] = i + 2;
-      if(write(p[1], &n[i], 4) < 0){
+      if(write(p[1], &n[i], 2) < 0){
         fprintf(2, "write error\n");
         exit(1);
       }
