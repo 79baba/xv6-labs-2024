@@ -2,12 +2,12 @@
 #include "kernel/fcntl.h"
 #include "user/user.h"
 
-#define MAX_NUM 267
+#define MAX_NUM 270
 
-void primeproc(int) __attribute__((noreturn));
+void primes(int) __attribute__((noreturn));
 
 void
-primeproc(int readDp)
+primes(int readDp)
 {
   short prime;
   if(read(readDp, &prime, 2) == 0){
@@ -39,8 +39,8 @@ primeproc(int readDp)
   }
 
   if(pid == 0){
-    close(right[1]);
-    primeproc(right[0]);
+    primes(right[0]);
+    close(right[0]);
   } else {
     close(right[0]);
     wait(0);
@@ -66,7 +66,7 @@ main(int argc, char *argv[])
 
   if(pid == 0){
     close(p[1]);
-    primeproc(p[0]);
+    primes(p[0]);
   } else {
     close(p[0]);
     short n[MAX_NUM];
