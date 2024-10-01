@@ -81,7 +81,7 @@ main(int argc, char *argv[])
     }
     if((pid = fork()) < 0) {
       printf("fork failed\n");
-      exit(1);   
+      exit(1);
     }
     if(pid == 0) {
       close(fds[0]);
@@ -92,7 +92,7 @@ main(int argc, char *argv[])
       printf("exec %s failed\n", newargv[0]);
       exit(1);
     } else {
-       close(fds[1]);
+      close(fds[1]);
       if(read(fds[0], output, 64) < 0) {
         printf("FAIL; read failed; no secret\n");
         exit(1);
