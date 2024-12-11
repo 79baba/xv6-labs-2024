@@ -487,17 +487,17 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
 }
 
 void
-pteprint(pagetable_t pagetable, int level) {
+pteprint(pagetable_t pagetable, int level, uint64 parent_va) {
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
     if(pte & PTE_V){
-      uint64 va = i << PXSHIFT(level);
+      uint64 va = (i << PXSHIFT(level)) + parent_va;
       uint64 pa = PTE2PA(pte);
       for(int j = 0; j < 2 - level; j++)
         printf(".. ");
       printf("..%p: pte %p pa %p\n", (uint64 *)va, (uint64 *)pte, (uint64 *)pa);
       if(level > 0){
-        pteprint((pagetable_t)pa, level - 1);
+        pteprint((pagetable_t)pa, level - 1, va);
       }
     }
   }
@@ -508,7 +508,7 @@ void
 vmprint(pagetable_t pagetable) {
   // your code here
   printf("page table %p\n", pagetable);
-  pteprint(pagetable, 2);
+  pteprint(pagetable, 2, 0);
 }
 #endif
 
