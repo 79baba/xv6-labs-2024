@@ -94,7 +94,7 @@ uservec:
         # flush now-stale user entries from the TLB.
         sfence.vma zero, zero
 
-        # jump to usertrap(), which does not return
+        # jump to usertrap(), which does not return. 0x3ffffff09a
         jr t0
 
 .globl userret
