@@ -426,7 +426,11 @@ freewalk(pagetable_t pagetable)
 void
 uvmfree(pagetable_t pagetable, uint64 sz)
 {
-  if(sz > 0)
+  if(sz > 2097152){
+    uint64 pgsz = sz % 2097152;
+    superuvmunmap(pagetable, 2097152, SUPERPGROUNDUP(sz)/SUPERPGSIZE - 1, 1);
+    uvmunmap(pagetable, 0, PGROUNDUP(pgsz)/PGSIZE, 1);
+  } else if(sz > 0)
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
   freewalk(pagetable);
 }
@@ -441,13 +445,14 @@ int
 uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
 {
   pte_t *pte;
-  uint64 pa, i;
+  uint64 pa, i, j;
   uint flags;
-  char *mem;
+  char *mem, *supermem;
   int szinc;
 
-  for(i = 0; i < sz; i += szinc){
-    szinc = PGSIZE;
+  uint64 pgsz = sz % SUPERPGSIZE;
+
+  for(i = 0; i < pgsz; i += szinc){
     szinc = PGSIZE;
     if((pte = walk(old, i, 0)) == 0)
       panic("uvmcopy: pte should exist");
@@ -463,10 +468,31 @@ uvmcopy(pagetable_t old, pagetable_t new, uint64 sz)
       goto err;
     }
   }
+
+  for(j = 2097152; j < sz; j += szinc){
+    szinc = SUPERPGSIZE;
+    if((pte = walk(old, j, 0)) == 0)
+      panic("uvmcopy: superpte should exist");
+    if((*pte & PTE_V) == 0)
+      panic("uvmcopy: superpage not present");
+    pa = PTE2PA(*pte);
+    flags = PTE_FLAGS(*pte);
+    if((supermem = superalloc()) == 0)
+      goto supererr;
+    memmove(supermem, (char*)pa, SUPERPGSIZE);
+    if(mapsuperpages(new, j, SUPERPGSIZE, (uint64)supermem, flags) != 0){
+      superfree(supermem);
+      goto err;
+    }
+  }
   return 0;
 
  err:
   uvmunmap(new, 0, i / PGSIZE, 1);
+  return -1;
+
+ supererr:
+  superuvmunmap(new, 0, j / SUPERPGSIZE, 1);
   return -1;
 }
 
