@@ -426,13 +426,16 @@ freewalk(pagetable_t pagetable)
 void
 uvmfree(pagetable_t pagetable, uint64 sz)
 {
-  if(sz > 2097152){
-    uint64 pgsz = sz % 2097152;
-    superuvmunmap(pagetable, 2097152, SUPERPGROUNDUP(sz)/SUPERPGSIZE - 1, 1);
-    uvmunmap(pagetable, 0, PGROUNDUP(pgsz)/PGSIZE, 1);
-  } else if(sz > 0)
+  if(sz > 0)
     uvmunmap(pagetable, 0, PGROUNDUP(sz)/PGSIZE, 1);
   freewalk(pagetable);
+}
+
+void
+superuvmfree(pagetable_t pagetable, uint64 supersz)
+{
+  if(supersz > 0)
+    superuvmunmap(pagetable, 2097152, SUPERPGROUNDUP(supersz)/SUPERPGSIZE - 1, 1);
 }
 
 // Given a parent process's page table, copy

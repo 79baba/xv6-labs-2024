@@ -165,12 +165,13 @@ freeproc(struct proc *p)
     kfree((void*)p->trapframe);
   p->trapframe = 0;
   if(p->pagetable)
-    proc_freepagetable(p->pagetable, p->sz);
+    proc_freepagetable(p->pagetable, p->sz, p->supersz);
   if(p->usc)
     kfree((void*)p->usc);
   p->usc = 0;
   p->pagetable = 0;
   p->sz = 0;
+  p->supersz = 0;
   p->pid = 0;
   p->parent = 0;
   p->name[0] = 0;
@@ -224,11 +225,12 @@ proc_pagetable(struct proc *p)
 // Free a process's page table, and free the
 // physical memory it refers to.
 void
-proc_freepagetable(pagetable_t pagetable, uint64 sz)
+proc_freepagetable(pagetable_t pagetable, uint64 sz, uint64 supersz)
 {
   uvmunmap(pagetable, TRAMPOLINE, 1, 0);
   uvmunmap(pagetable, TRAPFRAME, 1, 0);
   uvmunmap(pagetable, USYSCALL, 1, 0);
+  superuvmfree(pagetable, supersz);
   uvmfree(pagetable, sz);
 }
 
@@ -278,24 +280,36 @@ userinit(void)
 int
 growproc(int n)
 {
-  uint64 sz;
+  uint64 sz, supersz;
   struct proc *p = myproc();
 
   sz = p->sz;
-  if(n > 2097152){
-    if((sz = superuvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
+  supersz = p->supersz;
+  if(n > 134217728){
+    return -1;
+  }
+  if(n > 67108864){
+    if((supersz = superuvmalloc(p->pagetable, sz, sz + 67108864, PTE_W)) == 0) {
+      return -1;
+    }
+    if((sz = uvmalloc(p->pagetable, sz, sz + n - 67108864, PTE_W)) == 0) {
+      return -1;
+    }
+  } else if(n > 2097152){
+    if((supersz = superuvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
       return -1;
     }
   } else if(n > 0){
     if((sz = uvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
       return -1;
     }
-  } else if(n < -2097152){
-    sz = superuvmdealloc(p->pagetable, sz, sz + n);
+  } else if(n < -2097152 && supersz > 0){
+    supersz = superuvmdealloc(p->pagetable, sz, sz + n);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  p->supersz = supersz;
   return 0;
 }
 
@@ -320,6 +334,7 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  np->supersz = p->supersz;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);
