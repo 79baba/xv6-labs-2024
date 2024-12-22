@@ -289,14 +289,14 @@ growproc(int n)
     return -1;
   }
   if(n > 67108864){
-    if((supersz = superuvmalloc(p->pagetable, sz, sz + 67108864, PTE_W)) == 0) {
+    if((supersz = superuvmalloc(p->pagetable, supersz, supersz + 67108864, PTE_W)) == 0) {
       return -1;
     }
     if((sz = uvmalloc(p->pagetable, sz, sz + n - 67108864, PTE_W)) == 0) {
       return -1;
     }
   } else if(n > 2097152){
-    if((supersz = superuvmalloc(p->pagetable, sz, sz + n, PTE_W)) == 0) {
+    if((supersz = superuvmalloc(p->pagetable, supersz, supersz + n, PTE_W)) == 0) {
       return -1;
     }
   } else if(n > 0){
@@ -304,7 +304,7 @@ growproc(int n)
       return -1;
     }
   } else if(n < -2097152 && supersz > 0){
-    supersz = superuvmdealloc(p->pagetable, sz, sz + n);
+    supersz = superuvmdealloc(p->pagetable, supersz, supersz + n);
   } else if(n < 0){
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
@@ -334,6 +334,11 @@ fork(void)
     return -1;
   }
   np->sz = p->sz;
+  if(superuvmcopy(p->pagetable, np->pagetable, p->supersz) < 0){
+    freeproc(np);
+    release(&np->lock);
+    return -1;
+  }
   np->supersz = p->supersz;
 
   // copy saved user registers.
