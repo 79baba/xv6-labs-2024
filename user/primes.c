@@ -1,85 +1,71 @@
-#include "kernel/types.h"
-#include "kernel/fcntl.h"
-#include "user/user.h"
-
-#define MAX_NUM 270
-
-void primes(int) __attribute__((noreturn));
+#include <kernel/types.h>
+#include <user/user.h>
+#include <kernel/stat.h>
 
 void
-primes(int readDp)
+primes(int* p) __attribute__((noreturn));
+void
+primes(int* p)
 {
-  short prime;
-  if(read(readDp, &prime, 2) == 0){
-    close(readDp);
+  close(p[1]);
+  int a, b, n;
+  int p1[2] = {0, 0};
+
+  if(((n = read(p[0], &a, sizeof(a)))) < 4)
+  {
+    close(p[0]);
+    wait(0);
     exit(0);
   }
-  printf("prime %d\n", prime);
-
-  int right[2];
-  if(pipe(right) < 0){
-    fprintf(2, "pipe error\n");
-    exit(1);
-  }
-
-  short n;
-  while(read(readDp, &n, 2) > 0){
-    if(n % prime != 0)
-      write(right[1], &n, 2);
-  }
-    
-  close(readDp);
-  close(right[1]);
-
-  int pid = fork();
-
-  if(pid < 0){
-    fprintf(2, "fork error\n");
-    exit(1);
-  }
-
-  if(pid == 0){
-    primes(right[0]);
-    close(right[0]);
-  } else {
-    close(right[0]);
+  printf("prime %d\n", a);
+  pipe(p1);
+  if(fork() == 0)
+  {
+    close(p[0]);
+    close(p1[1]);
+    primes(p1);
     wait(0);
+    exit(0);
   }
+  else
+  {
+    close(p1[0]);
+  }
+
+  while(read(p[0], &b, sizeof(b)) == 4)
+  {
+    if(b % a != 0)
+    {
+      write(p1[1], &b, sizeof(b));
+    }
+  }
+  write(p1[1], "a", 1);
+  close(p1[1]);
+  close(p[0]);
+  wait(0);
   exit(0);
 }
 
 int
-main(int argc, char *argv[])
+main(int argc, char* argv[])
 {
   int p[2];
-  if(pipe(p) < 0){
-    fprintf(2, "pipe error\n");
-    exit(1);
+  pipe(p);
+
+  if(fork() == 0)
+  { // child
+    primes(p);
   }
-
-  int pid = fork();
-
-  if(pid < 0){
-    fprintf(2, "fork error\n");
-    exit(1);
-  }
-
-  if(pid == 0){
-    close(p[1]);
-    primes(p[0]);
-  } else {
+  else
+  { // parent
     close(p[0]);
-    short n[MAX_NUM];
-    for(int i = 0; i < MAX_NUM; i++){
-      n[i] = i + 2;
-      if(write(p[1], &n[i], 2) < 0){
-        fprintf(2, "write error\n");
-        exit(1);
-      }
+    for(int i = 2; i <= 280; i++)
+    {
+      write(p[1], &i, sizeof(i));
     }
+    write(p[1], "a", 1);
     close(p[1]);
-    wait(0);
   }
-  
+  wait(0);
   exit(0);
 }

@@ -1,32 +1,31 @@
-#include "kernel/types.h"
-#include "kernel/fcntl.h"
-#include "user/user.h"
+#include <kernel/types.h>
+#include <user/user.h>
+#include <kernel/stat.h>
 
 int
-main(int argc, char *argv[])
+main(int argc, char* argv[])
 {
-  int p1[2], p2[2];
-  char ball = 'b';
-  
+  int p[2];
+  int p1[2];
+  char b[1];
+  pipe(p);
   pipe(p1);
-  pipe(p2);
 
-  if(fork() == 0){
-    close(p1[1]);
-    close(p2[0]);
-    read(p1[0], &ball, 1);
-    fprintf(1, "%d: received ping\n", getpid());
-    write(p2[1], &ball, 1);
-    close(p1[0]);
-    close(p2[1]);
-  } else {
-    close(p1[0]);
-    close(p2[1]);
-    write(p1[1], &ball, 1);
-    read(p2[0], &ball, 1);
-    fprintf(1, "%d: received pong\n", getpid());
-    close(p1[1]);
-    close(p2[0]);
+  if(fork() == 0)
+  { // child
+    if(read(p[0], b, 1) == 1)
+    {
+      fprintf(1, "%d: received ping\n", getpid());
+      write(p1[1], b, 1);
+    }
+  }
+  else
+  { // parent
+    write(p[1], "a", 1);
+    if(read(p1[0], b, 1) == 1)
+    {
+      fprintf(1, "%d: received pong\n", getpid());
+    }
   }
   exit(0);
 }
